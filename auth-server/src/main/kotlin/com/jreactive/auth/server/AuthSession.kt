@@ -17,7 +17,61 @@
 
 package com.jreactive.auth.server
 
-class AuthSession {
+import akka.actor.AbstractActor
+import akka.actor.ActorRef
+import akka.actor.Props
+import com.jreactive.auth.messages.PacketMsg
+import com.jreactive.auth.packet.`in`.AUTH_LOGON_CHALLENGE_C
+import io.netty.channel.Channel
+
+
+class AuthSession(private val channel: Channel, private val manager: ActorRef) : AbstractActor() {
+
+    private var status: AuthStatus = AuthStatus.STATUS_CHALLENGE
+
+    private val handlers: Map<AuthStatus, (PacketMsg) -> Unit> = mapOf(
+            AuthStatus.STATUS_CHALLENGE to ::handleLogonChallenge
+    )
+
+
+    override fun createReceive(): Receive {
+        return receiveBuilder()
+                .match(PacketMsg::class.java, ::readPacket)
+                .build()
+    }
+
+    private fun readPacket(packetMsg: PacketMsg) {
+
+        val status = AuthStatus.values()[packetMsg.id]
+
+        if (status != this.status) {
+            destroy()
+        }
+
+        handlers[status]?.invoke(packetMsg)
+        packetMsg.msg.release()
+
+    }
+
+    private fun handleLogonChallenge(packetMsg: PacketMsg) {
+        status = AuthStatus.STATUS_CLOSED
+        val packet = AUTH_LOGON_CHALLENGE_C()
+        packet.read(packetMsg.msg)
+    }
+
+    private fun checkIpBanned(): Boolean {
+        TODO()
+    }
+
+    private fun destroy() {
+        channel.flush().close()
+    }
+
+
+}
+
+fun props(channel: Channel, manager: ActorRef): Props {
+    return Props.create(AuthSession::class.java, channel, manager)
 }
 
 enum class AuthStatus {

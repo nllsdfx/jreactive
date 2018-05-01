@@ -15,16 +15,11 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.jreactive.auth
+package com.jreactive.auth.messages
 
-import akka.actor.ActorSystem
-import com.jreactive.auth.handlers.AuthHandlersInitializer
-import com.jreactive.commons.server.TCPServer
+import io.netty.buffer.ByteBuf
+import io.netty.channel.ChannelId
 
-val aSystem = ActorSystem.create("AuthSystem")
+class DestroyMessage(val channelId: ChannelId)
 
-fun main(args: Array<String>) {
-    val server = TCPServer("localhost", 3724)
-    server.childHandler(AuthHandlersInitializer())
-    server.start()
-}
+class PacketMsg(val id: Int, val channelId: ChannelId, val msg: ByteBuf)

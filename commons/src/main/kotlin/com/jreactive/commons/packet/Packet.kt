@@ -15,16 +15,11 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.jreactive.auth
+package com.jreactive.commons.packet
 
-import akka.actor.ActorSystem
-import com.jreactive.auth.handlers.AuthHandlersInitializer
-import com.jreactive.commons.server.TCPServer
+abstract class Packet(private val id: Int) {
 
-val aSystem = ActorSystem.create("AuthSystem")
-
-fun main(args: Array<String>) {
-    val server = TCPServer("localhost", 3724)
-    server.childHandler(AuthHandlersInitializer())
-    server.start()
+    fun id(): Int {
+        return id
+    }
 }

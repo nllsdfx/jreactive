@@ -15,16 +15,17 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.jreactive.auth
+package com.jreactive.auth.handlers
 
-import akka.actor.ActorSystem
-import com.jreactive.auth.handlers.AuthHandlersInitializer
-import com.jreactive.commons.server.TCPServer
+import io.netty.channel.ChannelInitializer
+import io.netty.channel.socket.SocketChannel
+import io.netty.handler.logging.LoggingHandler
 
-val aSystem = ActorSystem.create("AuthSystem")
 
-fun main(args: Array<String>) {
-    val server = TCPServer("localhost", 3724)
-    server.childHandler(AuthHandlersInitializer())
-    server.start()
+class AuthHandlersInitializer : ChannelInitializer<SocketChannel>() {
+    override fun initChannel(ch: SocketChannel) {
+        ch.pipeline()
+                .addLast(ConnectionHandler())
+//                .addLast(LoggingHandler())
+    }
 }
