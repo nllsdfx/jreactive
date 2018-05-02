@@ -18,13 +18,29 @@
 package com.jreactive.auth
 
 import akka.actor.ActorSystem
+import com.jreactive.auth.config.DataBaseConfig
 import com.jreactive.auth.handlers.AuthHandlersInitializer
 import com.jreactive.commons.server.TCPServer
+import org.jetbrains.exposed.sql.Database
 
 val aSystem = ActorSystem.create("AuthSystem")
 
 fun main(args: Array<String>) {
+
+    if (!startDB()) {
+        return
+    }
+
     val server = TCPServer("localhost", 3724)
     server.childHandler(AuthHandlersInitializer())
     server.start()
+}
+
+private fun startDB(): Boolean {
+    return try {
+        Database.connect(DataBaseConfig.dataSource())
+        true
+    } catch (ex: Exception) {
+        false
+    }
 }

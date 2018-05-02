@@ -15,11 +15,30 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.jreactive.auth.messages
+package com.jreactive.auth.dao
 
-import io.netty.buffer.ByteBuf
-import io.netty.channel.ChannelId
+import akka.actor.AbstractActor
+import akka.actor.Props
+import akka.routing.FromConfig
+import java.io.Serializable
 
-class DestroyMessage(val channelId: ChannelId)
+class AccountDAOManager : AbstractActor() {
 
-class PacketMsg(val id: Int, val channelId: ChannelId, val msg: ByteBuf)
+    private val router = context.actorOf(FromConfig.getInstance()
+            .props(Props.create(AccountDAO::class.java)), "accountRouter")
+
+    init {
+        context.parent.path()
+    }
+
+    override fun createReceive(): Receive {
+        return receiveBuilder()
+                .match(AccountDAOMsg::class.java, { router.forward(it, context) })
+                .build()
+    }
+
+}
+
+interface AccountDAOMsg : Serializable
+
+class IPBanCheck(val address: String, val callback: (Boolean) -> Unit) : AccountDAOMsg

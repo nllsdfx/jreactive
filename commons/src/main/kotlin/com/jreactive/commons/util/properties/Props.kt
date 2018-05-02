@@ -15,11 +15,23 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.jreactive.auth.messages
+package com.jreactive.commons.util.properties
 
-import io.netty.buffer.ByteBuf
-import io.netty.channel.ChannelId
+import java.util.*
 
-class DestroyMessage(val channelId: ChannelId)
+class Props(private val fileName: String) {
 
-class PacketMsg(val id: Int, val channelId: ChannelId, val msg: ByteBuf)
+    private val props = Properties()
+
+    init {
+        val ist = javaClass.classLoader.getResourceAsStream(fileName)
+        ist.use {
+            props.load(ist)
+        }
+    }
+
+    fun get(key: String): String? {
+        return props.getProperty(key)
+    }
+
+}

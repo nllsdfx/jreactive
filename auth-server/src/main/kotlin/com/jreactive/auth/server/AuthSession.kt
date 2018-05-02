@@ -20,10 +20,17 @@ package com.jreactive.auth.server
 import akka.actor.AbstractActor
 import akka.actor.ActorRef
 import akka.actor.Props
+import com.jreactive.auth.aSystem
+import com.jreactive.auth.dao.AccountDAOManager
+import com.jreactive.auth.dao.IPBanCheck
 import com.jreactive.auth.messages.PacketMsg
 import com.jreactive.auth.packet.`in`.AUTH_LOGON_CHALLENGE_C
+import com.jreactive.auth.packet.out.AuthQuickResponse
+import io.netty.buffer.ByteBuf
 import io.netty.channel.Channel
+import java.net.InetSocketAddress
 
+private val daoMgr = aSystem.actorOf(Props.create(AccountDAOManager::class.java), "daoManager")
 
 class AuthSession(private val channel: Channel, private val manager: ActorRef) : AbstractActor() {
 
@@ -33,6 +40,10 @@ class AuthSession(private val channel: Channel, private val manager: ActorRef) :
             AuthStatus.STATUS_CHALLENGE to ::handleLogonChallenge
     )
 
+    override fun preStart() {
+        val ia = channel.remoteAddress() as InetSocketAddress
+        daoMgr.tell(IPBanCheck(ia.address.hostAddress, ::bannedCallback), self)
+    }
 
     override fun createReceive(): Receive {
         return receiveBuilder()
@@ -59,8 +70,16 @@ class AuthSession(private val channel: Channel, private val manager: ActorRef) :
         packet.read(packetMsg.msg)
     }
 
-    private fun checkIpBanned(): Boolean {
-        TODO()
+    private fun bannedCallback(banned: Boolean) {
+
+        if (banned) {
+            sendPacket(AuthQuickResponse.banned())
+        }
+
+    }
+
+    private fun sendPacket(b: ByteBuf) {
+        channel.writeAndFlush(b)
     }
 
     private fun destroy() {

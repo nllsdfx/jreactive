@@ -15,11 +15,16 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.jreactive.auth.messages
+package com.jreactive.commons.packet
 
 import io.netty.buffer.ByteBuf
-import io.netty.channel.ChannelId
 
-class DestroyMessage(val channelId: ChannelId)
+abstract class SendablePacket(val id: Int) : Packet(id) {
 
-class PacketMsg(val id: Int, val channelId: ChannelId, val msg: ByteBuf)
+    abstract fun write(): ByteBuf
+
+    fun wui8(v: Int, b: ByteBuf) {
+        b.writeByte(v)
+    }
+
+}

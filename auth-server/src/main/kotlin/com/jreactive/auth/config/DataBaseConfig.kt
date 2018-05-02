@@ -15,11 +15,28 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.jreactive.auth.messages
+package com.jreactive.auth.config
 
-import io.netty.buffer.ByteBuf
-import io.netty.channel.ChannelId
+import com.jreactive.commons.util.properties.Props
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 
-class DestroyMessage(val channelId: ChannelId)
+object DataBaseConfig {
 
-class PacketMsg(val id: Int, val channelId: ChannelId, val msg: ByteBuf)
+    private val props = Props("db/db.properties")
+
+    fun dataSource(): HikariDataSource {
+
+        val config = HikariConfig()
+
+        with(config) {
+            driverClassName = props.get("db.driver")
+            jdbcUrl = props.get("db.url")
+            username = props.get("db.username")
+            password = props.get("db.password")
+        }
+
+        return HikariDataSource(config)
+    }
+
+}

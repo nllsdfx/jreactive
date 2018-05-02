@@ -15,11 +15,22 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.jreactive.auth.messages
+package com.jreactive.auth.packet.out
 
+import com.jreactive.auth.messages.AuthResult
+import com.jreactive.auth.server.AuthStatus
+import com.jreactive.commons.packet.SendablePacket
 import io.netty.buffer.ByteBuf
-import io.netty.channel.ChannelId
+import io.netty.buffer.Unpooled
 
-class DestroyMessage(val channelId: ChannelId)
+abstract class AuthSendablePacket(id: Int) : SendablePacket(id) {
 
-class PacketMsg(val id: Int, val channelId: ChannelId, val msg: ByteBuf)
+    fun banned(): ByteBuf {
+        val b = Unpooled.directBuffer()
+        wui8(AuthStatus.STATUS_CHALLENGE.ordinal, b)
+        wui8(0x00, b)
+        wui8(AuthResult.WOW_FAIL_BANNED.code, b)
+        return b
+    }
+
+}
