@@ -15,6 +15,24 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.jreactive.commons.packet
+package com.jreactive.commons.security
 
-abstract class ReadablePacket(id: Int) : Packet(id)
+enum class Role {
+    PLAYER,
+    MODERATOR,
+    GAME_MASTER,
+    ADMIN
+}
+
+enum class LocaleConstant {
+    enUS,
+    koKR,
+    frFR,
+    deDE,
+    zhCN,
+    zhTW,
+    esES,
+    esMX,
+    ruRU,
+    TOTAL_LOCALES
+}

@@ -17,40 +17,42 @@
 
 package com.jreactive.auth.packet.`in`
 
+import com.jreactive.commons.packet.PacketReader
 import com.jreactive.commons.packet.ReadablePacket
 import io.netty.buffer.ByteBuf
 
-class AUTH_LOGON_CHALLENGE_C : ReadablePacket(id = 0x00) {
+class AUTH_LOGON_CHALLENGE_C(
+        val error: Int,
+        val size: Int,
+        val gameName: String,
+        val majorVersion: Int,
+        val midVersion: Int,
+        val minorVersion: Int,
+        val build: Int,
+        val platform: String,
+        val os: String,
+        val country: String,
+        val timeZone: Long,
+        val ip: Long,
+        val login: String) : ReadablePacket(id = 0x00) {
+}
 
-    private var error: Int? = null
-    private var size: Int? = null
-    private lateinit var gameName: String
-    private var majorVersion: Int? = null
-    private var midVersion: Int? = null
-    private var minorVersion: Int? = null
-    private var build: Int? = null
-    private lateinit var platform: String
-    private lateinit var os: String
-    private lateinit var country: String
-    private var timeZone: Long? = null
-    private var ip: Long? = null
-    private lateinit var login: String
-
-    override fun read(b: ByteBuf) {
-        error = rui8(b)
-        size = rui16(b)
-        gameName = String(rb(b, 4))
-        majorVersion = rui8(b)
-        midVersion = rui8(b)
-        minorVersion = rui8(b)
-        build = rui16(b)
-        platform = String(rb(b, 4))
-        os = String(rb(b, 4))
-        country = String(rb(b, 4))
-        timeZone = rui32(b)
-        ip = rui32(b)
-        val loginLen = rui8(b)
-        login = String(rb(b, loginLen))
-
+object AUTH_LOGON_READER : PacketReader() {
+    override fun readPacket(b: ByteBuf): ReadablePacket {
+        return AUTH_LOGON_CHALLENGE_C(
+                error = rui8(b),
+                size = rui16(b),
+                gameName = String(rb(b, 4)),
+                majorVersion = rui8(b),
+                midVersion = rui8(b),
+                minorVersion = rui8(b),
+                build = rui16(b),
+                platform = String(rb(b, 4)).reversed(),
+                os = String(rb(b, 4)).reversed(),
+                country = String(rb(b, 4)).reversed(),
+                timeZone = rui32(b),
+                ip = rui32(b),
+                login = String(rb(b, rui8(b)))
+        )
     }
 }

@@ -17,7 +17,9 @@
 
 package com.jreactive.commons.packet
 
-abstract class Packet(private val id: Int) {
+import java.io.Serializable
+
+abstract class Packet(private val id: Int) : Serializable {
 
     fun id(): Int {
         return id

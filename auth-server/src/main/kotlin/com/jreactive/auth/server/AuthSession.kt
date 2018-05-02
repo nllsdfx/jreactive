@@ -24,8 +24,9 @@ import com.jreactive.auth.aSystem
 import com.jreactive.auth.dao.AccountDAOManager
 import com.jreactive.auth.dao.IPBanCheck
 import com.jreactive.auth.messages.PacketMsg
-import com.jreactive.auth.packet.`in`.AUTH_LOGON_CHALLENGE_C
+import com.jreactive.auth.packet.`in`.AUTH_LOGON_READER
 import com.jreactive.auth.packet.out.AuthQuickResponse
+import com.jreactive.commons.security.Role
 import io.netty.buffer.ByteBuf
 import io.netty.channel.Channel
 import java.net.InetSocketAddress
@@ -35,6 +36,8 @@ private val daoMgr = aSystem.actorOf(Props.create(AccountDAOManager::class.java)
 class AuthSession(private val channel: Channel, private val manager: ActorRef) : AbstractActor() {
 
     private var status: AuthStatus = AuthStatus.STATUS_CHALLENGE
+
+    private lateinit var info: AccountInfo
 
     private val handlers: Map<AuthStatus, (PacketMsg) -> Unit> = mapOf(
             AuthStatus.STATUS_CHALLENGE to ::handleLogonChallenge
@@ -66,8 +69,7 @@ class AuthSession(private val channel: Channel, private val manager: ActorRef) :
 
     private fun handleLogonChallenge(packetMsg: PacketMsg) {
         status = AuthStatus.STATUS_CLOSED
-        val packet = AUTH_LOGON_CHALLENGE_C()
-        packet.read(packetMsg.msg)
+        val packet = AUTH_LOGON_READER.readPacket(packetMsg.msg)
     }
 
     private fun bannedCallback(banned: Boolean) {
@@ -89,14 +91,26 @@ class AuthSession(private val channel: Channel, private val manager: ActorRef) :
 
 }
 
-fun props(channel: Channel, manager: ActorRef): Props {
-    return Props.create(AuthSession::class.java, channel, manager)
-}
-
 enum class AuthStatus {
     STATUS_CHALLENGE,
     STATUS_LOGON_PROOF,
     STATUS_RECONNECT_PROOF,
     STATUS_AUTHED,
     STATUS_CLOSED
+}
+
+class AccountInfo(
+        val id: Long,
+        val login: String,
+        val isLocked: Boolean,
+        val lastIP: String,
+        val failedLogins: Long,
+        val isBanned: Boolean,
+        val isPermanentlyBanned: Boolean,
+        val role: Role,
+        val token: String
+)
+
+fun props(channel: Channel, manager: ActorRef): Props {
+    return Props.create(AuthSession::class.java, channel, manager)
 }

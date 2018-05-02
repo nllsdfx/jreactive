@@ -42,3 +42,5 @@ class AccountDAOManager : AbstractActor() {
 interface AccountDAOMsg : Serializable
 
 class IPBanCheck(val address: String, val callback: (Boolean) -> Unit) : AccountDAOMsg
+
+class AccountInfoMsg(val login: String)

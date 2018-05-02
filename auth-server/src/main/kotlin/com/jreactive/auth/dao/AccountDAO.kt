@@ -22,6 +22,7 @@ import akka.actor.Props
 import akka.dispatch.Futures
 import com.jreactive.auth.entity.IP_Banned
 import com.jreactive.auth.entity.IpBan
+import com.jreactive.auth.server.AccountInfo
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 
@@ -40,6 +41,12 @@ class AccountDAO : AbstractActor() {
             transaction {
                 msg.callback.invoke(!IpBan.searchQuery(IP_Banned.ip eq msg.address).empty())
             }
+        }, ctx)
+    }
+
+    private fun accountInfo(msg: AccountInfoMsg) {
+        Futures.future({
+
         }, ctx)
     }
 }
