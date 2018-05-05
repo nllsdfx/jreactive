@@ -17,9 +17,27 @@
 
 package com.jreactive.auth.packet.out
 
+import com.jreactive.auth.messages.AuthResult
+import com.jreactive.auth.server.AuthStatus
 import io.netty.buffer.ByteBuf
+import io.netty.buffer.Unpooled
 
 object AuthQuickResponse : AuthSendablePacket(-1) {
+
+    fun banned(): ByteBuf {
+        val b = Unpooled.directBuffer()
+        wui8(AuthStatus.STATUS_CHALLENGE.ordinal, b)
+        wui8(0x00, b)
+        wui8(AuthResult.WOW_FAIL_BANNED.code, b)
+        return b
+    }
+
+    fun wrongPassword(): ByteBuf {
+        val b = Unpooled.directBuffer()
+        wui8(AuthStatus.STATUS_LOGON_PROOF.ordinal, b)
+        wui8(AuthResult.WOW_FAIL_INCORRECT_PASSWORD.code, b)
+        return b
+    }
 
     override fun write(): ByteBuf {
         throw NotImplementedError()

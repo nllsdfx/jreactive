@@ -18,7 +18,6 @@ package com.jreactive.auth.server
 
 import com.jreactive.commons.util.BigNumber
 import java.security.MessageDigest
-import java.security.NoSuchAlgorithmException
 import java.util.*
 
 /**
@@ -60,39 +59,27 @@ object AccountUtils {
             hash[i] = hash[length - 1 - i]
             hash[length - 1 - i] = j
         }
-        // System.out.println("passhash:"+new BigInteger(1,
-        // hash).toString(16).toUpperCase());
+
         val s = BigNumber()
         s.setRand(32)
-        // System.out.println("s: " + s.asHexStr());
 
         val sha = MessageDigest.getInstance("SHA-1")
 
-        sha!!.update(s.asByteArray(32))
+        sha.update(s.asByteArray(32))
         sha.update(hash)
         val x = BigNumber()
         x.setBinary(sha.digest())
-        // System.out.println("x: " + x.asHexStr());
         val verifier = g.modPow(x, N)
-        // System.out.println("v: " + verifier.asHexStr());
         res["v"] = verifier
         res["s"] = s
         return res
     }
 
-    /**
-     * Gets the b.
-     *
-     * @param v the v
-     * @return the b
-     */
-    fun getB(v: BigNumber): BigNumber {
-
+    fun getB(v: BigNumber): Map<String, BigNumber> {
         val b = BigNumber()
         b.setRand(19)
         val gmod = g.modPow(b, N)
-        return v.multiply(k).add(gmod).mod(N)
-
+        return hashMapOf(Pair("b", b), Pair("B", (v.multiply(k).add(gmod)).mod(N)))
     }
 }
 

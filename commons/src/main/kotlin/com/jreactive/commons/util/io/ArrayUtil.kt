@@ -15,11 +15,23 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.jreactive.auth.packet.out
+package com.jreactive.commons.util.io
 
-import com.jreactive.commons.packet.SendablePacket
+class ArrayUtil {
+    companion object {
+        fun reverse(array: ByteArray) {
 
-abstract class AuthSendablePacket(id: Int) : SendablePacket(id) {
+            var i = 0
 
+            var j = array.size - 1
+            while (j > i) {
+                val tmp = array[j]
+                array[j] = array[i]
+                array[i] = tmp
+                --j
+                ++i
+            }
 
+        }
+    }
 }

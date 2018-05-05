@@ -19,7 +19,8 @@ package com.jreactive.auth.util
 
 object AuthHelper {
 
-    fun IsAcceptedClientBuild(build: Int): Boolean {
+    fun isAcceptedClientBuild(build: Int): Boolean {
         return build == 12340 || build == 13930
     }
+
 }

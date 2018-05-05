@@ -15,11 +15,29 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.jreactive.auth.packet.out
+package com.jreactive.auth.packet.`in`
 
-import com.jreactive.commons.packet.SendablePacket
+import com.jreactive.commons.packet.PacketReader
+import com.jreactive.commons.packet.ReadablePacket
+import io.netty.buffer.ByteBuf
 
-abstract class AuthSendablePacket(id: Int) : SendablePacket(id) {
+class AUTH_LOGON_PROOF_C(
+    val a: ByteArray,
+    val m1: ByteArray,
+    val crc_hash: ByteArray,
+    val numberOfKeys: Int,
+    val securityFlags: Int
+) : ReadablePacket(id = 0x01)
 
+object AUTH_LOGON_PROOF_READER : PacketReader() {
+    override fun readPacket(b: ByteBuf): AUTH_LOGON_PROOF_C {
+        return AUTH_LOGON_PROOF_C(
+                a = rb(b, 32),
+                m1 = rb(b, 20),
+                crc_hash = rb(b, 20),
+                numberOfKeys = rui8(b),
+                securityFlags = rui8(b)
+        )
+    }
 
 }

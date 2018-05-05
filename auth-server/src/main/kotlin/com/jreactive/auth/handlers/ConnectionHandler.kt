@@ -36,7 +36,8 @@ class ConnectionHandler : ChannelInboundHandlerAdapter() {
 
     override fun channelRead(ctx: ChannelHandlerContext, data: Any) {
         val msg = data as ByteBuf
-        frontActor.tell(PacketMsg(msg.readByte().toInt() and 0xFF, ctx.channel().id(), msg), ActorRef.noSender())
+
+        frontActor.tell(PacketMsg(msg.readUnsignedByte().toInt(), ctx.channel().id(), msg), ActorRef.noSender())
     }
 
     override fun channelUnregistered(ctx: ChannelHandlerContext) {

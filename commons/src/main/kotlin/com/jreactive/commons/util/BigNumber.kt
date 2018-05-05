@@ -162,6 +162,11 @@ class BigNumber {
         return BigNumber(this.bigInteger!!.mod(m.getBigInteger()))
     }
 
+    fun isZero() : Boolean {
+        return this.bigInteger!!.compareTo(BigInteger.ZERO) == 0
+    }
+
+
     /**
      * Mod pow.
      *

@@ -33,6 +33,10 @@ abstract class SendablePacket(val id: Int) : Packet(id) {
             b.writeBytes(bytes)
         }
 
+        fun wui16(v: Int, b: ByteBuf) {
+            b.writeShort(v)
+        }
+
     }
 
 }

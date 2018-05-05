@@ -24,21 +24,30 @@ import com.jreactive.auth.aSystem
 import com.jreactive.auth.dao.AccountDAOManager
 import com.jreactive.auth.dao.AccountInfoMsg
 import com.jreactive.auth.dao.IPBanCheck
+import com.jreactive.auth.entity.Account
 import com.jreactive.auth.entity.UserAccount
 import com.jreactive.auth.messages.AuthResult
 import com.jreactive.auth.messages.PacketMsg
+import com.jreactive.auth.packet.`in`.AUTH_LOGON_PROOF_READER
 import com.jreactive.auth.packet.`in`.AUTH_LOGON_READER
 import com.jreactive.auth.packet.out.AuthQuickResponse
 import com.jreactive.auth.util.AuthHelper
 import com.jreactive.commons.packet.SendablePacket
 import com.jreactive.commons.security.Role
 import com.jreactive.commons.util.BigNumber
+import com.jreactive.commons.util.io.ArrayUtil
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
 import io.netty.channel.Channel
+import org.jetbrains.exposed.sql.SqlExpressionBuilder
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.update
+import java.math.BigInteger
 import java.net.InetSocketAddress
+import java.nio.charset.Charset
+import java.security.MessageDigest
 import java.util.*
+import kotlin.experimental.xor
 
 private val daoMgr = aSystem.actorOf(Props.create(AccountDAOManager::class.java), "daoManager")
 
@@ -54,8 +63,15 @@ class AuthSession(private val channel: Channel, private val manager: ActorRef) :
 
     private lateinit var B: BigNumber
 
-    private val handlers: Map<AuthStatus, (PacketMsg) -> Unit> = mapOf(
-            AuthStatus.STATUS_CHALLENGE to ::handleLogonChallenge
+    private lateinit var b: BigNumber
+
+    private var s: BigNumber? = null
+
+    private var v: BigNumber? = null
+
+    private val handlers: Map<AuthStatus, (PacketMsg) -> Boolean> = mapOf(
+            AuthStatus.STATUS_CHALLENGE to ::handleLogonChallenge,
+            AuthStatus.STATUS_LOGON_PROOF to ::handleLogonProof
     )
 
     override fun preStart() {
@@ -79,17 +95,122 @@ class AuthSession(private val channel: Channel, private val manager: ActorRef) :
             destroy()
         }
 
-        handlers[status]?.invoke(packetMsg)
+
+        if (!handlers[status]!!.invoke(packetMsg)) {
+//            destroy() // todo close channel after sending data
+        }
+
         packetMsg.msg.release()
 
     }
 
-    private fun handleLogonChallenge(packetMsg: PacketMsg) {
+    private fun handleLogonProof(packetMsg: PacketMsg): Boolean {
+        status = AuthStatus.STATUS_CLOSED
+        val packet = AUTH_LOGON_PROOF_READER.readPacket(packetMsg.msg)
+
+        return checkPassword(packet.a, packet.m1)
+    }
+
+    private fun checkPassword(a: ByteArray, m1: ByteArray): Boolean {
+
+        val sha = MessageDigest.getInstance("SHA-1")
+
+        sha.update(a)
+        sha.update(B.asByteArray(32))
+        val u = BigNumber()
+        u.setBinary(sha.digest())
+        val A = BigNumber()
+        A.setBinary(a)
+        val S = A.multiply(v!!.modPow(u, AccountUtils.N)).modPow(
+                b, AccountUtils.N)
+
+        val t1 = ByteArray(16)
+        val vK = ByteArray(40)
+
+        val t = S.asByteArray(32)
+        for (i in 0..15) {
+            t1[i] = t[i * 2]
+        }
+        sha.update(t1)
+        var t2 = sha.digest()
+        for (i in 0..19) {
+            vK[i * 2] = t2[i]
+        }
+        for (i in 0..15) {
+            t1[i] = t[i * 2 + 1]
+        }
+        sha.update(t1)
+        t2 = sha.digest()
+        for (i in 0..19) {
+            vK[i * 2 + 1] = t2[i]
+        }
+
+        val hash: ByteArray
+        sha.update(AccountUtils.N.asByteArray(32))
+        hash = sha.digest()
+        sha.update(AccountUtils.g.asByteArray(1))
+        val gH = sha.digest()
+        for (i in 0..19) {
+            hash[i] = hash[i] xor gH[i]
+        }
+
+        val t4: ByteArray
+        sha.update(info.login.toByteArray(Charset.forName("UTF-8")))
+        t4 = sha.digest()
+
+        sha.update(hash)
+        sha.update(t4)
+        sha.update(this.s!!.asByteArray(32))
+        sha.update(A.asByteArray(32))
+        sha.update(B.asByteArray(32))
+        sha.update(vK)
+
+        val sh = sha.digest()
+
+        if (Arrays.equals(sh, m1)) {
+
+            sha.update(A.asByteArray(32))
+            sha.update(sh)
+            sha.update(vK)
+            ArrayUtil.reverse(vK)
+
+            val key = BigInteger(1, vK).toString(16).toUpperCase()
+
+            transaction {
+                Account.update({Account.userName eq info.login.toLowerCase()}) {
+                    it[sessionKey] = key
+                }
+            }
+
+            val packet = Unpooled.directBuffer()
+            SendablePacket.wui8(AuthStatus.STATUS_LOGON_PROOF.ordinal, packet)
+            SendablePacket.wui8(0, packet)
+            SendablePacket.wb(sha.digest(), packet)
+            packet.writeInt(0x00800000) // 0x01 = GM, 0x08 = Trial, 0x00800000 = Pro pass (arena tournament)
+            packet.writeInt(0)
+            SendablePacket.wui16(0, packet)
+
+            sendPacket(packet)
+
+            status = AuthStatus.STATUS_AUTHED
+
+            return true
+
+        } else {
+            sendPacket(AuthQuickResponse.wrongPassword())
+            //todo handle lot's of wrong attempts to login
+            return false
+        }
+
+    }
+
+
+    private fun handleLogonChallenge(packetMsg: PacketMsg): Boolean {
         status = AuthStatus.STATUS_CLOSED
         val packet = AUTH_LOGON_READER.readPacket(packetMsg.msg)
         build = packet.build
         daoMgr.tell(AccountInfoMsg(packet.login), self)
-
+        return true
     }
 
     private fun logonChallengeCallback(rs: AccountInfoArray) {
@@ -103,7 +224,7 @@ class AuthSession(private val channel: Channel, private val manager: ActorRef) :
             return
         }
 
-        if (!AuthHelper.IsAcceptedClientBuild(build)) {
+        if (!AuthHelper.isAcceptedClientBuild(build)) {
             SendablePacket.wui8(AuthResult.WOW_FAIL_VERSION_INVALID.code, packet)
             sendPacket(packet)
             return
@@ -135,17 +256,15 @@ class AuthSession(private val channel: Channel, private val manager: ActorRef) :
         status = AuthStatus.STATUS_LOGON_PROOF
 
         // Get the password from the account table, upper it, and make the SRP6 calculation
-        val rI = rs.user.shaPass
         val databaseV = rs.user.v
         val databaseS = rs.user.s
 
         val variable: HashMap<String, BigNumber>
 
-        val s: BigNumber?
-        val v: BigNumber?
 
         // multiply with 2 since bytes are stored as hexstring
         if (databaseV.length != BufferSizes.SRP_6_V.size * 2 || databaseS.length != BufferSizes.SRP_6_S.size * 2) {
+            val rI = rs.user.shaPass
             variable = AccountUtils.calculateVSFields(rI)
             s = variable["s"]
             v = variable["v"]
@@ -158,15 +277,17 @@ class AuthSession(private val channel: Channel, private val manager: ActorRef) :
         } else {
             s = BigNumber()
             v = BigNumber()
-            s.setHexStr(databaseS)
-            v.setHexStr(databaseV)
+            s!!.setHexStr(databaseS)
+            v!!.setHexStr(databaseV)
 
         }
 
-        val B = AccountUtils.getB(v!!)
+        val bmap = AccountUtils.getB(v!!)
+        B = bmap["B"]!!
+        b = bmap["b"]!!
 
         val unk3 = BigNumber()
-        unk3.setRand(16 )
+        unk3.setRand(16)
 
         SendablePacket.wb(B.asByteArray(32), packet)
         SendablePacket.wui8(1, packet)
