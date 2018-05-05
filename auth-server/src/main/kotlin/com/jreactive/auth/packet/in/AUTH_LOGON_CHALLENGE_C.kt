@@ -34,11 +34,10 @@ class AUTH_LOGON_CHALLENGE_C(
         val country: String,
         val timeZone: Long,
         val ip: Long,
-        val login: String) : ReadablePacket(id = 0x00) {
-}
+        val login: String) : ReadablePacket(id = 0x00)
 
 object AUTH_LOGON_READER : PacketReader() {
-    override fun readPacket(b: ByteBuf): ReadablePacket {
+    override fun readPacket(b: ByteBuf): AUTH_LOGON_CHALLENGE_C {
         return AUTH_LOGON_CHALLENGE_C(
                 error = rui8(b),
                 size = rui16(b),

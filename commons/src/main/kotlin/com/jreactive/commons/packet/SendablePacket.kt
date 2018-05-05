@@ -23,8 +23,16 @@ abstract class SendablePacket(val id: Int) : Packet(id) {
 
     abstract fun write(): ByteBuf
 
-    fun wui8(v: Int, b: ByteBuf) {
-        b.writeByte(v)
+    companion object {
+
+        fun wui8(v: Int, b: ByteBuf) {
+            b.writeByte(v)
+        }
+
+        fun wb(bytes: ByteArray, b: ByteBuf) {
+            b.writeBytes(bytes)
+        }
+
     }
 
 }

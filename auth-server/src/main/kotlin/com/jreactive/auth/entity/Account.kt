@@ -31,6 +31,10 @@ object Account : LongIdTable() {
     val s = varchar("s", 64)
     val tokenKey = varchar("token_key", 100)
     val online = bool("online")
+    val locked = bool("locked")
+    val lastIP = varchar("last_ip", 15)
+    val failedLogins = long("failed_logins")
+//    val ban = optReference("ban", Account_Banned)
 
 }
 
@@ -38,18 +42,22 @@ class UserAccount(id: EntityID<Long>) : LongEntity(id) {
 
     companion object : LongEntityClass<UserAccount>(Account)
 
-    var login by Account.userName
-    var email by Account.email
-    var shaPass by Account.shaPass
-    var sessionKey by Account.sessionKey
+    val login by Account.userName
+    val email by Account.email
+    val shaPass by Account.shaPass
+    val sessionKey by Account.sessionKey
     var v by Account.v
     var s by Account.s
-    var tokenKey by Account.tokenKey
-    var online by Account.online
+    val tokenKey by Account.tokenKey
+    val online by Account.online
+    val locked by Account.locked
+    val lastIP by Account.lastIP
+    val failedLogins by Account.failedLogins
+    val ban by AccountBanned referrersOn  Account_Banned.accountId
 }
 
 object Account_Banned : LongIdTable() {
-    val accountId = long("account_id")
+    val accountId = reference("account_id", Account.id)
     val banDate = datetime("ban_date")
     val unbanDate = datetime("unbad_date")
     val bannedBy = long("banned_by")
@@ -60,10 +68,10 @@ object Account_Banned : LongIdTable() {
 class AccountBanned(id: EntityID<Long>) : LongEntity(id) {
     companion object : LongEntityClass<AccountBanned>(Account_Banned)
     val accountId by UserAccount referrersOn Account.id
-    var banDate by Account_Banned.banDate
-    var unbanDate by Account_Banned.unbanDate
+    val banDate by Account_Banned.banDate
+    val unbanDate by Account_Banned.unbanDate
     val bannedBy by UserAccount referrersOn Account.id
-    var banReason by Account_Banned.banReason
+    val banReason by Account_Banned.banReason
 }
 
 object IP_Banned : LongIdTable() {
@@ -77,10 +85,10 @@ object IP_Banned : LongIdTable() {
 class IpBan(id: EntityID<Long>) : LongEntity(id) {
     companion object : LongEntityClass<IpBan>(IP_Banned)
 
-    var ip by IP_Banned.ip
-    var banDate by IP_Banned.banDate
-    var unbanDate by IP_Banned.unbanDate
-    var bannedBy by IP_Banned.bannedBy
-    var banReason by IP_Banned.banDate
+    val ip by IP_Banned.ip
+    val banDate by IP_Banned.banDate
+    val unbanDate by IP_Banned.unbanDate
+    val bannedBy by IP_Banned.bannedBy
+    val banReason by IP_Banned.banDate
 }
 

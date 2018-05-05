@@ -18,12 +18,14 @@
 package com.jreactive.auth.dao
 
 import akka.actor.AbstractActor
+import akka.actor.ActorRef
 import akka.actor.Props
 import akka.dispatch.Futures
-import com.jreactive.auth.entity.IP_Banned
-import com.jreactive.auth.entity.IpBan
-import com.jreactive.auth.server.AccountInfo
+import com.jreactive.auth.entity.*
+import com.jreactive.auth.server.AccountInfoArray
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 
 class AccountDAO : AbstractActor() {
@@ -33,6 +35,7 @@ class AccountDAO : AbstractActor() {
     override fun createReceive(): Receive {
         return receiveBuilder()
                 .match(IPBanCheck::class.java, { checkIP(it) })
+                .match(AccountInfoMsg::class.java, { accountInfo(it, sender) })
                 .build()
     }
 
@@ -44,9 +47,24 @@ class AccountDAO : AbstractActor() {
         }, ctx)
     }
 
-    private fun accountInfo(msg: AccountInfoMsg) {
-        Futures.future({
+    private fun accountInfo(msg: AccountInfoMsg, s: ActorRef) {
 
+        Futures.future({
+            transaction {
+
+                var user: UserAccount? = null
+
+                try {
+                    user = UserAccount.wrapRow(Account.leftJoin(Account_Banned)
+                            .select {
+                                Account.userName.eq(msg.login.toLowerCase())
+                            }
+                            .single())
+                } finally {
+                    s.tell(AccountInfoArray(user), ActorRef.noSender())
+                }
+
+            }
         }, ctx)
     }
 }
@@ -54,3 +72,4 @@ class AccountDAO : AbstractActor() {
 fun props(): Props {
     return Props.create(AccountDAO::class.java)
 }
+

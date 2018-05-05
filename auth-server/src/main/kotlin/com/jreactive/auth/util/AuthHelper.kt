@@ -15,17 +15,11 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.jreactive.auth.handlers
+package com.jreactive.auth.util
 
-import io.netty.channel.ChannelInitializer
-import io.netty.channel.socket.SocketChannel
-import io.netty.handler.logging.LoggingHandler
+object AuthHelper {
 
-
-class AuthHandlersInitializer : ChannelInitializer<SocketChannel>() {
-    override fun initChannel(ch: SocketChannel) {
-        ch.pipeline()
-                .addLast(ConnectionHandler())
-                .addLast(LoggingHandler())
+    fun IsAcceptedClientBuild(build: Int): Boolean {
+        return build == 12340 || build == 13930
     }
 }
