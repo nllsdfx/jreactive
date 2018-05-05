@@ -24,7 +24,6 @@ import akka.dispatch.Futures
 import com.jreactive.auth.entity.*
 import com.jreactive.auth.server.AccountInfoArray
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 

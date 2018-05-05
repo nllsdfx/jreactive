@@ -36,9 +36,9 @@ import com.jreactive.commons.util.BigNumber
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
 import io.netty.channel.Channel
+import org.jetbrains.exposed.sql.transactions.transaction
 import java.net.InetSocketAddress
 import java.util.*
-import kotlin.experimental.and
 
 private val daoMgr = aSystem.actorOf(Props.create(AccountDAOManager::class.java), "daoManager")
 
@@ -149,9 +149,12 @@ class AuthSession(private val channel: Channel, private val manager: ActorRef) :
             variable = AccountUtils.calculateVSFields(rI)
             s = variable["s"]
             v = variable["v"]
-            rs.user.v = v!!.asHexStr()
-            rs.user.s = s!!.asHexStr()
-            //todo update db user
+
+            transaction {
+                rs.user.v = v!!.asHexStr()
+                rs.user.s = s!!.asHexStr()
+            }
+
         } else {
             s = BigNumber()
             v = BigNumber()
@@ -160,7 +163,7 @@ class AuthSession(private val channel: Channel, private val manager: ActorRef) :
 
         }
 
-        val B = AccountUtils.getB(v)
+        val B = AccountUtils.getB(v!!)
 
         val unk3 = BigNumber()
         unk3.setRand(16 )
@@ -170,7 +173,7 @@ class AuthSession(private val channel: Channel, private val manager: ActorRef) :
         SendablePacket.wb(AccountUtils.g.asByteArray(1), packet)
         SendablePacket.wui8(32, packet)
         SendablePacket.wb(AccountUtils.N.asByteArray(32), packet)
-        SendablePacket.wb(s.asByteArray(32), packet)
+        SendablePacket.wb(s!!.asByteArray(32), packet)
         SendablePacket.wb(unk3.asByteArray(16), packet)
         SendablePacket.wui8(0, packet)
 
