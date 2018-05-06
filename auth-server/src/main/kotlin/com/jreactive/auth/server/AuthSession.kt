@@ -39,7 +39,6 @@ import com.jreactive.commons.util.io.ArrayUtil
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
 import io.netty.channel.Channel
-import org.jetbrains.exposed.sql.SqlExpressionBuilder
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 import java.math.BigInteger
@@ -69,9 +68,9 @@ class AuthSession(private val channel: Channel, private val manager: ActorRef) :
 
     private var v: BigNumber? = null
 
-    private val handlers: Map<AuthStatus, (PacketMsg) -> Boolean> = mapOf(
-            AuthStatus.STATUS_CHALLENGE to ::handleLogonChallenge,
-            AuthStatus.STATUS_LOGON_PROOF to ::handleLogonProof
+    private val handlers: Map<Int, AuthHandler> = mapOf(
+            AuthCmd.AUTH_LOGON_CHALLENGE.id to AuthHandler(AuthStatus.STATUS_CHALLENGE, ::handleLogonChallenge),
+            AuthCmd.AUTH_LOGON_PROOF.id to AuthHandler(AuthStatus.STATUS_LOGON_PROOF, ::handleLogonProof)
     )
 
     override fun preStart() {
@@ -89,14 +88,16 @@ class AuthSession(private val channel: Channel, private val manager: ActorRef) :
 
     private fun readPacket(packetMsg: PacketMsg) {
 
-        val status = AuthStatus.values()[packetMsg.id]
+        val handler = handlers[packetMsg.id]
 
-        if (status != this.status) {
+
+        if (handler?.status != this.status) {
             destroy()
+            return
         }
 
 
-        if (!handlers[status]!!.invoke(packetMsg)) {
+        if (!handler.func.invoke(packetMsg)) {
 //            destroy() // todo close channel after sending data
         }
 
@@ -177,7 +178,7 @@ class AuthSession(private val channel: Channel, private val manager: ActorRef) :
             val key = BigInteger(1, vK).toString(16).toUpperCase()
 
             transaction {
-                Account.update({Account.userName eq info.login.toLowerCase()}) {
+                Account.update({ Account.userName eq info.login.toLowerCase() }) {
                     it[sessionKey] = key
                 }
             }
@@ -337,6 +338,19 @@ class AuthSession(private val channel: Channel, private val manager: ActorRef) :
 
 }
 
+private enum class AuthCmd(val id: Int) {
+    AUTH_LOGON_CHALLENGE(0x00),
+    AUTH_LOGON_PROOF(0x01),
+    AUTH_RECONNECT_CHALLENGE(0x02),
+    AUTH_RECONNECT_PROOF(0x03),
+    REALM_LIST(0x10),
+    XFER_INITIATE(0x30),
+    XFER_DATA(0x31),
+    XFER_ACCEPT(0x32),
+    XFER_RESUME(0x33),
+    XFER_CANCEL(0x34)
+}
+
 enum class AuthStatus {
     STATUS_CHALLENGE,
     STATUS_LOGON_PROOF,
@@ -356,6 +370,8 @@ class AccountInfo(
         val role: Role,
         val token: String = ""
 )
+
+private class AuthHandler(val status: AuthStatus, val func: (PacketMsg) -> Boolean)
 
 class AccountInfoArray(val user: UserAccount?)
 
