@@ -35,6 +35,7 @@ class AccountDAO : AbstractActor() {
         return receiveBuilder()
                 .match(IPBanCheck::class.java, { checkIP(it) })
                 .match(AccountInfoMsg::class.java, { accountInfo(it, sender) })
+                .match(RealmListCountMsg::class.java, {realmlist(it)})
                 .build()
     }
 
@@ -64,6 +65,12 @@ class AccountDAO : AbstractActor() {
                 }
 
             }
+        }, ctx)
+    }
+
+    private fun realmlist(msg: RealmListCountMsg) {
+        Futures.future({
+
         }, ctx)
     }
 }

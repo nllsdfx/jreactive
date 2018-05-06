@@ -70,7 +70,8 @@ class AuthSession(private val channel: Channel, private val manager: ActorRef) :
 
     private val handlers: Map<Int, AuthHandler> = mapOf(
             AuthCmd.AUTH_LOGON_CHALLENGE.id to AuthHandler(AuthStatus.STATUS_CHALLENGE, ::handleLogonChallenge),
-            AuthCmd.AUTH_LOGON_PROOF.id to AuthHandler(AuthStatus.STATUS_LOGON_PROOF, ::handleLogonProof)
+            AuthCmd.AUTH_LOGON_PROOF.id to AuthHandler(AuthStatus.STATUS_LOGON_PROOF, ::handleLogonProof),
+            AuthCmd.REALM_LIST.id to AuthHandler(AuthStatus.STATUS_AUTHED, ::handleRealmList)
     )
 
     override fun preStart() {
@@ -103,6 +104,10 @@ class AuthSession(private val channel: Channel, private val manager: ActorRef) :
 
         packetMsg.msg.release()
 
+    }
+
+    private fun handleRealmList(packetMsg: PacketMsg) : Boolean {
+        return true
     }
 
     private fun handleLogonProof(packetMsg: PacketMsg): Boolean {

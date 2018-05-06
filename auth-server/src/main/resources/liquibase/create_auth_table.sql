@@ -68,3 +68,29 @@ create index on ip_banned (ip);
 comment on table ip_banned
 is 'Banned IPs';
 
+create table realmlist (
+  id                   serial                               not null primary key,
+  name                 varchar(32) default 'JReactive Realm',
+  local_address        varchar(255) default '127.0.0.1'     not null,
+  localSubnetMask      varchar(255) default '255.255.255.0' not null,
+  port                 smallint default '8085'              not null,
+  icon                 smallint default '0'                 not null,
+  flag                 smallint default '2'                 not null,
+  timezone             smallint default '0'                 not null,
+  allowedSecurityLevel smallint default '0'                 not null,
+  population           float default '0'                    not null,
+  gamebuild            int default '12340'                  not null
+);
+
+create index realmlist_idx
+  on realmlist (name);
+
+create table realm_character (
+  realmid    serial references realmlist (id)                                       not null,
+  account_id serial references account (id)                                         not null,
+  numchars   smallint default '0'                                                   not null,
+  primary key (realmid, account_id)
+);
+
+create index acct_id
+  on realm_character (account_id);
